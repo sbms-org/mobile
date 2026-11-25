@@ -87,7 +87,10 @@ class AppTheme {
           color: AppColors.textSecondary,
           fontSize: 16,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
       ),
     );
   }

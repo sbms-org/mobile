@@ -55,7 +55,10 @@ class AppDialogs {
                 color: Colors.green.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.check_circle_outline, color: Colors.green.shade700),
+              child: Icon(
+                Icons.check_circle_outline,
+                color: Colors.green.shade700,
+              ),
             ),
             const SizedBox(width: 12),
             Text(title, style: const TextStyle(fontSize: 18)),
@@ -100,14 +103,19 @@ class AppDialogs {
     return result ?? false;
   }
 
-  static void showLoading(BuildContext context, {String message = 'Loading...'}) {
+  static void showLoading(
+    BuildContext context, {
+    String message = 'Loading...',
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => PopScope(
         canPop: false,
         child: Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
@@ -142,7 +150,10 @@ class AppDialogs {
         title: Text(title),
         content: SingleChildScrollView(child: Text(content)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(okText)),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(okText),
+          ),
         ],
       ),
     );

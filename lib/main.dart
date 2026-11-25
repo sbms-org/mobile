@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:pm/l10n/generated/L10n.dart';
+import 'package:servicebook/l10n/generated/L10n.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/secure_storage_service.dart';
 import 'core/services/firebase_notification_service.dart';
@@ -12,19 +12,15 @@ import 'features/auth/presentation/pages/root_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp();
     await FirebaseNotificationService.initialize();
   } catch (e) {
     print('Firebase initialization error: $e');
   }
-  
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -45,10 +41,7 @@ class MyApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('am'),
-      ],
+      supportedLocales: const [Locale('en'), Locale('am')],
       home: FutureBuilder<String?>(
         future: SecureStorageService.getToken(),
         builder: (context, snapshot) {
@@ -56,9 +49,7 @@ class MyApp extends ConsumerWidget {
             return const Scaffold(
               body: SizedBox(
                 width: 80,
-                child: Center(
-                  child: LinearProgressIndicator(),
-                ),
+                child: Center(child: LinearProgressIndicator()),
               ),
             );
           }

@@ -46,7 +46,7 @@ class ApiClient {
         '${AppConfig.baseUrl}$endpoint',
       ).replace(queryParameters: stringQueryParams);
 
-      AppLogger.d('GET: $uri');
+      AppLogger.d('GET: ${uri.path}');
 
       final response = await http
           .get(uri, headers: await _getHeaders(includeAuth: requiresAuth))
@@ -78,8 +78,7 @@ class ApiClient {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
 
-      AppLogger.d('POST: $uri');
-      AppLogger.d('Body: ${jsonEncode(body)}');
+      AppLogger.d('POST: ${uri.path}');
 
       final response = await http
           .post(
@@ -115,7 +114,7 @@ class ApiClient {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
 
-      AppLogger.d('PUT: $uri');
+      AppLogger.d('PUT: ${uri.path}');
 
       final response = await http
           .put(
@@ -145,7 +144,7 @@ class ApiClient {
   }) async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
-      AppLogger.d('PATCH: $uri');
+      AppLogger.d('PATCH: ${uri.path}');
       final response = await http
           .patch(
             uri,
@@ -171,7 +170,7 @@ class ApiClient {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
 
-      AppLogger.d('DELETE: $uri');
+      AppLogger.d('DELETE: ${uri.path}');
 
       final response = await http
           .delete(uri, headers: await _getHeaders(includeAuth: requiresAuth))
@@ -200,7 +199,7 @@ class ApiClient {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}$endpoint');
 
-      AppLogger.d('$method (multipart): $uri');
+      AppLogger.d('$method (multipart): ${uri.path}');
 
       final request = http.MultipartRequest(method, uri);
 
@@ -257,7 +256,7 @@ class ApiClient {
         '${AppConfig.baseUrl}$endpoint',
       ).replace(queryParameters: stringQueryParams);
 
-      AppLogger.d('DOWNLOAD: $uri');
+      AppLogger.d('DOWNLOAD: ${uri.path}');
 
       final response = await http
           .get(uri, headers: await _getHeaders(includeAuth: requiresAuth))
@@ -286,7 +285,6 @@ class ApiClient {
 
   static Map<String, dynamic> _handleResponse(http.Response response) {
     AppLogger.d('Response status: ${response.statusCode}');
-    AppLogger.d('Response body: ${response.body}');
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 

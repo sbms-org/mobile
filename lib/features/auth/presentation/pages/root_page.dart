@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pm/core/utils/logger.dart';
+import 'package:servicebook/core/utils/logger.dart';
 import '../../../../core/services/secure_storage_service.dart';
 import '../../../../core/services/onboarding_service.dart';
 import '../../../../core/enums/user_role.dart';
@@ -30,7 +30,7 @@ class _RootPageState extends ConsumerState<RootPage> {
       AppLogger.d('RootPage: Checking onboarding...');
       final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
       AppLogger.d('RootPage: Has seen onboarding: $hasSeenOnboarding');
-      
+
       if (mounted) {
         if (!hasSeenOnboarding) {
           setState(() {
@@ -49,8 +49,7 @@ class _RootPageState extends ConsumerState<RootPage> {
     } catch (e, s) {
       AppLogger.e('RootPage: Error checking onboarding', e, s);
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     }
   }

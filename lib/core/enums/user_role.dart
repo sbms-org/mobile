@@ -4,27 +4,22 @@ enum UserRole {
   companyStaff,
   broker,
   supportAgent,
-  administrator;
+  admin;
 
   static UserRole? fromApiValue(String? value) {
     switch (value?.toLowerCase().replaceAll('-', '_')) {
       case 'client':
         return UserRole.client;
-      case 'provider':
       case 'individual_provider':
-      case 'service_provider':
         return UserRole.individualProvider;
       case 'company_staff':
-      case 'company':
         return UserRole.companyStaff;
       case 'broker':
         return UserRole.broker;
       case 'support_agent':
-      case 'support':
         return UserRole.supportAgent;
       case 'admin':
-      case 'administrator':
-        return UserRole.administrator;
+        return UserRole.admin;
       default:
         return null;
     }
@@ -42,8 +37,8 @@ enum UserRole {
         return 'broker';
       case UserRole.supportAgent:
         return 'support_agent';
-      case UserRole.administrator:
-        return 'administrator';
+      case UserRole.admin:
+        return 'admin';
     }
   }
 }

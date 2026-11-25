@@ -19,7 +19,7 @@ String _roleName(BuildContext context, UserRole role) => switch (role) {
   UserRole.companyStaff => _text(context, 'Company staff', 'የድርጅት ሰራተኛ'),
   UserRole.broker => _text(context, 'Broker', 'ደላላ'),
   UserRole.supportAgent => _text(context, 'Support agent', 'የድጋፍ ሰራተኛ'),
-  UserRole.administrator => _text(context, 'Administrator', 'አስተዳዳሪ'),
+  UserRole.admin => _text(context, 'Admin', 'አስተዳዳሪ'),
 };
 
 class ServiceBookHomePage extends ConsumerStatefulWidget {

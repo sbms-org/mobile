@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:pm/core/constants/app_colors.dart';
+import 'package:servicebook/core/constants/app_colors.dart';
 
 enum ToastType { success, error, info, warning }
 
@@ -165,11 +165,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                         color: _getColor().withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(
-                        _getIcon(),
-                        color: _getColor(),
-                        size: 24,
-                      ),
+                      child: Icon(_getIcon(), color: _getColor(), size: 24),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -186,7 +182,11 @@ class _ToastWidgetState extends State<_ToastWidget>
                         await _controller.reverse();
                         widget.onDismiss();
                       },
-                      icon: Icon(Icons.close, size: 20, color: Colors.grey.shade400),
+                      icon: Icon(
+                        Icons.close,
+                        size: 20,
+                        color: Colors.grey.shade400,
+                      ),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),

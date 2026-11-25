@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pm/l10n/generated/L10n.dart';
+import 'package:servicebook/l10n/generated/L10n.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../core/constants/app_colors.dart';
 
@@ -9,7 +9,7 @@ class LanguageSelectionDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = L10n.of(context)!;
+    final l10n = L10n.of(context);
     final currentLocale = ref.watch(localeProvider);
 
     return Dialog(
@@ -21,10 +21,7 @@ class LanguageSelectionDialog extends ConsumerWidget {
           children: [
             Text(
               l10n.language,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
             _buildLanguageOption(
@@ -64,17 +61,23 @@ class LanguageSelectionDialog extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.grey.withOpacity(0.3),
+            color: isSelected
+                ? AppColors.primary
+                : Colors.grey.withOpacity(0.3),
             width: isSelected ? 2 : 1,
           ),
         ),
         child: Row(
           children: [
             Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              isSelected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
               color: isSelected ? AppColors.primary : Colors.grey,
             ),
             const SizedBox(width: 16),

@@ -28,8 +28,11 @@ class ServiceProvider {
     return ServiceProvider(
       id: _string(json['id'] ?? json['providerId'] ?? json['provider_id']),
       name: _string(
-        json['name'] ?? json['fullName'] ?? json['full_name'] ??
-            json['businessName'] ?? json['business_name'],
+        json['name'] ??
+            json['fullName'] ??
+            json['full_name'] ??
+            json['businessName'] ??
+            json['business_name'],
         fallback: 'Service provider',
       ),
       company: _nullableString(json['company'] ?? json['companyName']),
@@ -45,8 +48,8 @@ class ServiceProvider {
       availability: json['availability'] ?? json['availableHours'],
       meetingModes: (json['meetingModes'] ?? json['meeting_modes']) is List
           ? ((json['meetingModes'] ?? json['meeting_modes']) as List)
-              .map((value) => value.toString())
-              .toList()
+                .map((value) => value.toString())
+                .toList()
           : const [],
     );
   }
@@ -78,7 +81,9 @@ class ServiceWorkPost {
         description: _string(json['description'] ?? json['details']),
         category: _nullableString(json['category']),
         location: _nullableString(json['location'] ?? json['city']),
-        meetingMode: _nullableString(json['meetingMode'] ?? json['meeting_mode']),
+        meetingMode: _nullableString(
+          json['meetingMode'] ?? json['meeting_mode'],
+        ),
         createdAt: DateTime.tryParse(
           (json['createdAt'] ?? json['created_at'] ?? '').toString(),
         ),
@@ -113,7 +118,9 @@ class ServiceBooking {
       status: _string(json['status'], fallback: 'pending'),
       providerName: _nullableString(
         json['providerName'] ??
-            (provider is Map ? provider['name'] ?? provider['full_name'] : null),
+            (provider is Map
+                ? provider['name'] ?? provider['full_name']
+                : null),
       ),
       clientName: _nullableString(
         json['clientName'] ??
@@ -127,9 +134,7 @@ class ServiceBooking {
       scheduledAt: DateTime.tryParse(
         (json['scheduledAt'] ?? json['scheduled_at'] ?? '').toString(),
       ),
-      meetingMode: _nullableString(
-        json['meetingMode'] ?? json['meeting_mode'],
-      ),
+      meetingMode: _nullableString(json['meetingMode'] ?? json['meeting_mode']),
     );
   }
 }
@@ -137,8 +142,7 @@ class ServiceBooking {
 String _string(dynamic value, {String fallback = ''}) =>
     value?.toString() ?? fallback;
 
-String? _nullableString(dynamic value) =>
-    value?.toString();
+String? _nullableString(dynamic value) => value?.toString();
 
 double? _double(dynamic value) =>
     value is num ? value.toDouble() : double.tryParse('$value');

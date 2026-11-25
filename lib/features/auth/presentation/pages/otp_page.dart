@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
-import 'package:pm/l10n/generated/L10n.dart';
+import 'package:servicebook/l10n/generated/L10n.dart';
 import '../../../../core/api/auth_api.dart';
 import '../../../../shared/widgets/curved_header.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -11,8 +11,7 @@ import 'waiting_approval_page.dart';
 
 class OtpPage extends ConsumerStatefulWidget {
   final String phoneNumber;
-  final bool isRegistration;
-  const OtpPage({super.key, required this.phoneNumber, this.isRegistration = false});
+  const OtpPage({super.key, required this.phoneNumber});
 
   @override
   ConsumerState<OtpPage> createState() => _OtpPageState();
@@ -30,7 +29,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
   Future<void> _verifyOtp() async {
     final otp = _otpController.text.trim();
-    
+
     if (otp.length != 6) {
       AppToast.error(context, L10n.of(context).otpLengthError);
       return;
@@ -42,11 +41,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
     try {
       final response = await AuthApi.verifyOtp(widget.phoneNumber, otp);
-      
+
       if (mounted && response.success) {
         // Small delay to ensure storage is written
         await Future.delayed(const Duration(milliseconds: 100));
-        
+
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -58,7 +57,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       // else if (mounted && response.code == 'ACCOUNT_PENDING') {
       //   // Small delay to ensure storage is written
       //   await Future.delayed(const Duration(milliseconds: 100));
-        
       //   if (mounted) {
       //     Navigator.pushAndRemoveUntil(
       //       context,
@@ -67,7 +65,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       //     );
       //   }
       // }
-       else {
+      else {
         if (mounted) {
           AppToast.error(context, response.message);
         }
@@ -139,13 +137,13 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             CurvedSection(
               height: 380,
               showBackButton: true,
-              title: widget.isRegistration ? l10n.registerAsOwner : l10n.verification,
+              title: l10n.verification,
               subtitle: l10n.otpSent,
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 20),
                   child: Icon(
-                    widget.isRegistration ? Icons.person_add_alt_1_rounded : Icons.security_rounded,
+                    Icons.security_rounded,
                     size: 80,
                     color: Colors.white,
                   ),
@@ -166,14 +164,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                     '${l10n.enterOtp} ${widget.phoneNumber}',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (widget.isRegistration) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.otpRegistrationInfo,
-                      style: Theme.of(context).textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
                   const SizedBox(height: 32),
                   Center(
                     child: Pinput(
@@ -202,12 +192,12 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       onPressed: _isLoading ? null : _verifyOtp,
                       child: _isLoading
                           ? Center(
-                            child: const SizedBox(
+                              child: const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: LinearProgressIndicator(),
                               ),
-                          )
+                            )
                           : Text(l10n.verify),
                     ),
                   ),

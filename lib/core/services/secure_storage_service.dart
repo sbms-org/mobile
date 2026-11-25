@@ -33,7 +33,7 @@ class SecureStorageService {
   static Future<void> saveUserData(Map<String, dynamic> userData) async {
     try {
       await _storage.write(key: _keyUserData, value: jsonEncode(userData));
-      AppLogger.d('User data saved', jsonEncode(userData));
+      AppLogger.d('User data saved');
     } catch (e, s) {
       AppLogger.e('Failed to save user data', e, s);
       rethrow;

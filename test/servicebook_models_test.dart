@@ -1,23 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pm/core/enums/user_role.dart';
-import 'package:pm/features/servicebook/domain/models/servicebook_models.dart';
-import 'package:pm/features/auth/presentation/pages/role_selection_page.dart';
+import 'package:servicebook/core/enums/user_role.dart';
+import 'package:servicebook/features/servicebook/domain/models/servicebook_models.dart';
+import 'package:servicebook/features/auth/presentation/pages/role_selection_page.dart';
 
 void main() {
   group('UserRole.fromApiValue', () {
-    test('recognizes all supported SBMS roles and common API aliases', () {
+    test('recognizes the supported SBMS role identifiers', () {
       expect(UserRole.fromApiValue('client'), UserRole.client);
+      expect(UserRole.client.apiValue, 'client');
       expect(
         UserRole.fromApiValue('individual_provider'),
         UserRole.individualProvider,
       );
+      expect(UserRole.individualProvider.apiValue, 'individual_provider');
       expect(UserRole.fromApiValue('company_staff'), UserRole.companyStaff);
+      expect(UserRole.companyStaff.apiValue, 'company_staff');
       expect(UserRole.fromApiValue('broker'), UserRole.broker);
+      expect(UserRole.broker.apiValue, 'broker');
       expect(UserRole.fromApiValue('support_agent'), UserRole.supportAgent);
-      expect(UserRole.fromApiValue('admin'), UserRole.administrator);
+      expect(UserRole.supportAgent.apiValue, 'support_agent');
+      expect(UserRole.fromApiValue('admin'), UserRole.admin);
+      expect(UserRole.admin.apiValue, 'admin');
       expect(UserRole.fromApiValue('tenant'), isNull);
+      expect(UserRole.fromApiValue('owner'), isNull);
+      expect(UserRole.fromApiValue('property_manager'), isNull);
     });
   });
 
@@ -59,9 +67,7 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(home: RoleSelectionPage()),
-      ),
+      const ProviderScope(child: MaterialApp(home: RoleSelectionPage())),
     );
 
     expect(find.text('Client'), findsOneWidget);
@@ -69,7 +75,7 @@ void main() {
     expect(find.text('Company staff'), findsOneWidget);
     expect(find.text('Broker'), findsOneWidget);
     expect(find.text('Support agent'), findsOneWidget);
-    expect(find.text('Administrator'), findsOneWidget);
+    expect(find.text('Admin'), findsOneWidget);
     expect(find.text('Property Owner'), findsNothing);
     expect(find.text('Tenant'), findsNothing);
   });

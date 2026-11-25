@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pm/core/api/auth_api.dart';
-import 'package:pm/l10n/generated/L10n.dart';
-import 'package:pm/shared/widgets/app_dialogs.dart';
+import 'package:servicebook/core/api/auth_api.dart';
+import 'package:servicebook/l10n/generated/L10n.dart';
+import 'package:servicebook/shared/widgets/app_dialogs.dart';
 import '../../../../shared/widgets/curved_header.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'otp_page.dart';
@@ -28,7 +28,7 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
   Future<void> _sendOtp() async {
     final l10n = L10n.of(context);
     final phone = _phoneController.text.trim();
-    
+
     if (phone.isEmpty) {
       AppToast.error(context, l10n.invalidPhoneNumber);
       return;
@@ -88,22 +88,32 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
 
   void _showAboutDialog() {
     final l10n = L10n.of(context);
-      AppDialogs.showContent(context, title: l10n.about, content: l10n.aboutContent, okText: l10n.ok);
+    AppDialogs.showContent(
+      context,
+      title: l10n.about,
+      content: l10n.aboutContent,
+      okText: l10n.ok,
+    );
   }
 
   void _showPrivacyDialog() {
     final l10n = L10n.of(context);
-      AppDialogs.showContent(context, title: l10n.privacy, content: l10n.privacyContent, okText: l10n.ok);
+    AppDialogs.showContent(
+      context,
+      title: l10n.privacy,
+      content: l10n.privacyContent,
+      okText: l10n.ok,
+    );
   }
 
   void _showLanguageDialog() {
-      AppDialogs.showLanguageSelector(context);
+    AppDialogs.showLanguageSelector(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = L10n.of(context);
-    
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -138,22 +148,25 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Phone Input
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[50],
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1.5,
-                        ),
+                        color: Colors.grey.shade300,
+                        width: 1.5,
+                      ),
                     ),
                     child: Row(
                       children: [
                         // Country Code
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
                           child: Text(
                             '+251',
                             style: TextStyle(
@@ -168,14 +181,16 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                           height: 30,
                           color: Colors.grey.shade300,
                         ),
-                        
+
                         // Phone Input
                         Expanded(
                           child: TextField(
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             maxLength: 9,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -196,17 +211,16 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                       ],
                     ),
                   ),
-                  
+
                   // errors shown with AppToast for better UX
-                  
                   const SizedBox(height: 12),
                   Text(
                     l10n.phoneHelper,
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Login Button
                   SizedBox(
                     width: double.infinity,
@@ -220,13 +234,16 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                       ),
                       child: Text(
                         l10n.sendOtp,
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   Center(
                     child: Text(
                       Localizations.localeOf(context).languageCode == 'am'
@@ -239,9 +256,9 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Footer Links
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

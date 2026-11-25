@@ -51,8 +51,8 @@ class RoleSelectionPage extends ConsumerWidget {
         Icons.support_agent,
       ),
       (
-        UserRole.administrator,
-        'Administrator',
+        UserRole.admin,
+        'Admin',
         'Review service activity and access safety tools.',
         'አስተዳዳሪ',
         'የአገልግሎት እንቅስቃሴን ይመልከቱ እና የደህንነት መሳሪያዎችን ይጠቀሙ።',

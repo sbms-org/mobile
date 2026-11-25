@@ -1,11 +1,11 @@
 {
-    "name": "pm",
-    "short_name": "pm",
+    "name": "ServiceBook",
+    "short_name": "ServiceBook",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "ServiceBook mobile app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

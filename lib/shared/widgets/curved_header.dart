@@ -12,24 +12,26 @@ class CurvedHeaderPainter extends CustomPainter {
 
     final path = Path();
     path.lineTo(0, size.height - 60);
-    
+
     // Create the ellipse/curve
     path.quadraticBezierTo(
-      size.width / 2, size.height + 40, 
-      size.width, size.height - 60,
+      size.width / 2,
+      size.height + 40,
+      size.width,
+      size.height - 60,
     );
-    
+
     path.lineTo(size.width, 0);
     path.close();
 
     canvas.drawPath(path, paint);
-    
+
     // Optional: Draw some subtle circles for modern look as seen in some designs
     final circlePaint = Paint()
       ..color = Colors.white.withOpacity(0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
-      
+
     canvas.drawCircle(Offset(size.width * 0.9, 0), 70, circlePaint);
     canvas.drawCircle(Offset(size.width * 0.9, 0), 80, circlePaint);
     canvas.drawCircle(Offset(size.width * 0.9, 0), 90, circlePaint);
@@ -91,7 +93,11 @@ class CurvedSection extends StatelessWidget {
                               color: Colors.white.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                            child: const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         )
                       else
@@ -107,10 +113,10 @@ class CurvedSection extends StatelessWidget {
                     Text(
                       title!,
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            color: Colors.white,
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                   if (subtitle != null) ...[
@@ -118,9 +124,9 @@ class CurvedSection extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                          ),
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                   child,

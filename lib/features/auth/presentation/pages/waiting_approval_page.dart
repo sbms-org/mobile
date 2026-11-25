@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:pm/l10n/generated/L10n.dart';
+import 'package:servicebook/l10n/generated/L10n.dart';
 import '../../../../shared/widgets/curved_header.dart';
 import 'phone_number_page.dart';
 
@@ -39,7 +39,11 @@ class _WaitingApprovalPageState extends State<WaitingApprovalPage> {
             child: const Center(
               child: Padding(
                 padding: EdgeInsets.only(top: 20),
-                child: Icon(Icons.hourglass_bottom_rounded, size: 64, color: Colors.white),
+                child: Icon(
+                  Icons.hourglass_bottom_rounded,
+                  size: 64,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
@@ -47,7 +51,10 @@ class _WaitingApprovalPageState extends State<WaitingApprovalPage> {
             padding: const EdgeInsets.all(24.0),
             child: Column(
               children: [
-                Text(L10n.of(context).yourAccountPending, style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  L10n.of(context).yourAccountPending,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 12),
                 Text(
                   L10n.of(context).tryLoggingInLater,
@@ -59,7 +66,9 @@ class _WaitingApprovalPageState extends State<WaitingApprovalPage> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pushAndRemoveUntil(
                       context,
-                      MaterialPageRoute(builder: (_) => const PhoneNumberPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const PhoneNumberPage(),
+                      ),
                       (r) => false,
                     ),
                     child: Text(L10n.of(context).ok),
