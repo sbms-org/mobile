@@ -1,7 +1,7 @@
 class AppConfig {
   static const String _configuredBaseUrl = String.fromEnvironment(
     'SBMS_API_BASE_URL',
-    defaultValue: 'http://localhost:4242/api/v1',
+    defaultValue: 'http://localhost:3000/api/v1',
   );
   static String get baseUrl =>
       _configuredBaseUrl.replaceFirst(RegExp(r'/+$'), '');

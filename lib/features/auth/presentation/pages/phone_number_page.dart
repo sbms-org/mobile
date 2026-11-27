@@ -18,6 +18,35 @@ class PhoneNumberPage extends ConsumerStatefulWidget {
 
 class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
   final _phoneController = TextEditingController();
+  List<Map<String, dynamic>> _demoAccounts = [];
+  String? _demoAccountsError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDemoAccounts();
+  }
+
+  Future<void> _loadDemoAccounts() async {
+    try {
+      final response = await AuthApi.getDemoAccounts();
+      final accounts = response['users'];
+      if (!mounted) return;
+      setState(() {
+        _demoAccounts = response['demoMode'] == true && accounts is List
+            ? accounts.whereType<Map>().map((account) {
+                return account.map(
+                  (key, value) => MapEntry(key.toString(), value),
+                );
+              }).toList()
+            : [];
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _demoAccountsError = error.toString());
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -147,6 +176,70 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                     l10n.enterPhoneNumber,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
+                  if (_demoAccounts.isNotEmpty || _demoAccountsError != null) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF8DF),
+                        border: Border.all(color: const Color(0xFFE6D49B)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            Localizations.localeOf(context).languageCode == 'am'
+                                ? 'የሙከራ መለያ ይምረጡ'
+                                : 'Choose a demo role',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            Localizations.localeOf(context).languageCode == 'am'
+                                ? 'የማረጋገጫ ኮድ: 123456'
+                                : 'Demo verification code: 123456',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (_demoAccounts.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: _demoAccounts.map((account) {
+                                final name = account['fullname']?.toString() ??
+                                    'ServiceBook user';
+                                final role = account['role']
+                                        ?.toString()
+                                        .replaceAll('_', ' ') ??
+                                    '';
+                                final mobile =
+                                    account['mobile']?.toString() ?? '';
+                                return ActionChip(
+                                  label: Text('$name · $role'),
+                                  onPressed: () {
+                                    _phoneController.text = mobile
+                                        .replaceFirst('+251', '');
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                          if (_demoAccountsError != null)
+                            Text(
+                              Localizations.localeOf(context).languageCode == 'am'
+                                  ? 'የሙከራ መለያዎችን ማግኘት አልተቻለም። ${_demoAccountsError!}'
+                                  : 'Demo accounts could not be loaded: ${_demoAccountsError!}',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
 
                   // Phone Input

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/enums/user_role.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/services/api_client.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../data/servicebook_api.dart';
 import '../domain/models/servicebook_models.dart';
@@ -70,7 +71,7 @@ class _ServiceBookHomePageState extends ConsumerState<ServiceBookHomePage> {
     } else if (_index == 0) {
       body = StaffOverviewPage(role: widget.role);
     } else if (_index == 1) {
-      body = WorkFeedPage(canCreatePost: widget.role == UserRole.client);
+      body = WorkFeedPage(canCreatePost: _isProvider);
     } else if (_index == 2) {
       body = BookingsPage(canManage: _isProvider);
     } else {
@@ -104,6 +105,29 @@ class _ServiceBookHomePageState extends ConsumerState<ServiceBookHomePage> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: ApiClient.demoMode,
+            builder: (context, demoMode, _) => demoMode
+                ? Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF8DF),
+                      border: Border.all(color: const Color(0xFFE6D49B)),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      _text(
+                        context,
+                        'Demo data is active. Changes are simulated and are not saved to the live database.',
+                        'የሙከራ ውሂብ ንቁ ነው። ለውጦች በማስመሰል ላይ ብቻ ናቸው እና በቀጥታ ዳታቤዝ አይቀመጡም።',
+                      ),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
           Expanded(child: body),
         ],
@@ -143,7 +167,7 @@ class _NearbyProvidersPageState extends State<NearbyProvidersPage> {
   final _longitude = TextEditingController();
   final _radius = TextEditingController(text: '10');
   final _category = TextEditingController();
-  String _meetingMode = 'in_person';
+  String _meetingMode = 'provider_comes';
   bool _loading = false;
   String? _error;
   List<ServiceProvider>? _providers;
@@ -264,19 +288,26 @@ class _NearbyProvidersPageState extends State<NearbyProvidersPage> {
         ),
         items: [
           DropdownMenuItem(
-            value: 'in_person',
-            child: Text(_text(context, 'In person', 'ፊት ለፊት')),
+            value: 'provider_comes',
+            child: Text(
+              _text(context, 'Provider comes to me', 'አገልግሎት ሰጪው ወደ እኔ ይመጣል'),
+            ),
           ),
           DropdownMenuItem(
-            value: 'remote',
-            child: Text(_text(context, 'Remote', 'በርቀት')),
+            value: 'client_goes',
+            child: Text(
+              _text(context, 'I go to the provider', 'ወደ አገልግሎት ሰጪው እሄዳለሁ'),
+            ),
           ),
           DropdownMenuItem(
-            value: 'either',
-            child: Text(_text(context, 'Either', 'ሁለቱም')),
+            value: 'third_location',
+            child: Text(
+              _text(context, 'Meet at a third location', 'በሌላ ቦታ እንገናኛለን'),
+            ),
           ),
         ],
-        onChanged: (value) => setState(() => _meetingMode = value ?? 'either'),
+        onChanged: (value) =>
+            setState(() => _meetingMode = value ?? 'provider_comes'),
       ),
       const SizedBox(height: 12),
       FilledButton.icon(
@@ -444,9 +475,10 @@ class _BookingDialog extends StatefulWidget {
 
 class _BookingDialogState extends State<_BookingDialog> {
   late String _serviceId;
-  String _meetingMode = 'in_person';
+  late String _meetingMode;
   late DateTime _scheduledAt;
-  final _notes = TextEditingController();
+  final _latitude = TextEditingController();
+  final _longitude = TextEditingController();
   bool _saving = false;
   String? _error;
 
@@ -458,11 +490,37 @@ class _BookingDialogState extends State<_BookingDialog> {
     _serviceId =
         (service['id'] ?? service['serviceId'] ?? service['service_id'] ?? '')
             .toString();
+    _meetingMode = _modesFor(service).first;
   }
+
+  List<String> _modesFor(Map<String, dynamic> service) {
+    final serviceModes = service['meetingModes'];
+    final providerModes = widget.provider.meetingModes;
+    final modes = serviceModes is List
+        ? serviceModes.map((mode) => mode.toString()).toList()
+        : providerModes;
+    return modes
+        .where(
+          (mode) => const {
+            'provider_comes',
+            'client_goes',
+            'third_location',
+          }.contains(mode),
+        )
+        .toList();
+  }
+
+  Map<String, dynamic> get _selectedService => widget.services.firstWhere(
+    (service) =>
+        (service['id'] ?? service['serviceId'] ?? service['service_id'])
+            .toString() ==
+        _serviceId,
+  );
 
   @override
   void dispose() {
-    _notes.dispose();
+    _latitude.dispose();
+    _longitude.dispose();
     super.dispose();
   }
 
@@ -477,6 +535,25 @@ class _BookingDialogState extends State<_BookingDialog> {
       );
       return;
     }
+    final durationMinutes = int.tryParse(
+      (_selectedService['durationMinutes'] ?? '').toString(),
+    );
+    final latitude = _meetingMode == 'client_goes'
+        ? widget.provider.latitude
+        : double.tryParse(_latitude.text.trim());
+    final longitude = _meetingMode == 'client_goes'
+        ? widget.provider.longitude
+        : double.tryParse(_longitude.text.trim());
+    if (durationMinutes == null || latitude == null || longitude == null) {
+      setState(
+        () => _error = _text(
+          context,
+          'This service needs a duration and valid meeting coordinates.',
+          'ለዚህ አገልግሎት የቆይታ ጊዜ እና ትክክለኛ የመገናኛ መጋጠሚያዎች ያስፈልጋሉ።',
+        ),
+      );
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -486,8 +563,10 @@ class _BookingDialogState extends State<_BookingDialog> {
         providerId: widget.provider.id,
         serviceId: _serviceId,
         scheduledAt: _scheduledAt,
+        durationMinutes: durationMinutes,
         meetingMode: _meetingMode,
-        notes: _notes.text,
+        latitude: latitude,
+        longitude: longitude,
       );
       if (!mounted) return;
       if (response['success'] == false) {
@@ -537,7 +616,24 @@ class _BookingDialogState extends State<_BookingDialog> {
                 ),
               ),
           ],
-          onChanged: (value) => setState(() => _serviceId = value ?? ''),
+          onChanged: (value) {
+            if (value == null) return;
+            final selected = widget.services.firstWhere(
+              (service) =>
+                  (service['id'] ??
+                          service['serviceId'] ??
+                          service['service_id'])
+                      .toString() ==
+                  value,
+            );
+            final modes = _modesFor(selected);
+            setState(() {
+              _serviceId = value;
+              if (!modes.contains(_meetingMode)) {
+                _meetingMode = modes.first;
+              }
+            });
+          },
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
@@ -546,19 +642,50 @@ class _BookingDialogState extends State<_BookingDialog> {
             labelText: _text(context, 'Meeting mode', 'የስብሰባ አይነት'),
           ),
           items: [
-            DropdownMenuItem(
-              value: 'in_person',
-              child: Text(_text(context, 'In person', 'ፊት ለፊት')),
-            ),
-            DropdownMenuItem(
-              value: 'remote',
-              child: Text(_text(context, 'Remote', 'በርቀት')),
-            ),
+            for (final mode in _modesFor(_selectedService))
+              DropdownMenuItem(
+                value: mode,
+                child: Text(switch (mode) {
+                  'provider_comes' => _text(
+                    context,
+                    'Provider comes to me',
+                    'አገልግሎት ሰጪው ወደ እኔ ይመጣል',
+                  ),
+                  'client_goes' => _text(
+                    context,
+                    'I go to the provider',
+                    'ወደ አገልግሎት ሰጪው እሄዳለሁ',
+                  ),
+                  _ => _text(
+                    context,
+                    'Meet at a third location',
+                    'በሌላ ቦታ እንገናኛለን',
+                  ),
+                }),
+              ),
           ],
           onChanged: (value) =>
-              setState(() => _meetingMode = value ?? 'in_person'),
+              setState(() => _meetingMode = value ?? 'provider_comes'),
         ),
         const SizedBox(height: 8),
+        if (_meetingMode != 'client_goes') ...[
+          TextField(
+            controller: _latitude,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: _text(context, 'Meeting latitude', 'የመገናኛ ኬክሮስ'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _longitude,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: _text(context, 'Meeting longitude', 'የመገናኛ ኬንትሮስ'),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
         OutlinedButton.icon(
           onPressed: _saving
               ? null
@@ -592,14 +719,6 @@ class _BookingDialogState extends State<_BookingDialog> {
           ),
         ),
         const SizedBox(height: 12),
-        TextField(
-          controller: _notes,
-          decoration: InputDecoration(
-            labelText: _text(context, 'Notes (optional)', 'ማስታወሻ (አማራጭ)'),
-            border: const OutlineInputBorder(),
-          ),
-          maxLines: 2,
-        ),
         if (_error != null) ...[
           const SizedBox(height: 8),
           Text(
@@ -677,7 +796,7 @@ class _WorkFeedPageState extends State<WorkFeedPage> {
                     }),
                 icon: const Icon(Icons.add),
                 label: Text(
-                  _text(context, 'Post a work request', 'የስራ ጥያቄ አውጣ'),
+                  _text(context, 'Share a work sample', 'የስራ ናሙና አጋራ'),
                 ),
               ),
               const SizedBox(height: 8),
@@ -723,32 +842,27 @@ class _WorkPostDialog extends StatefulWidget {
 }
 
 class _WorkPostDialogState extends State<_WorkPostDialog> {
-  final _title = TextEditingController();
-  final _description = TextEditingController();
-  final _category = TextEditingController();
-  bool _consent = false;
+  final _caption = TextEditingController();
+  final _area = TextEditingController();
+  final _photoUrl = TextEditingController();
   bool _submitting = false;
-  String _meetingMode = 'in_person';
   String? _error;
 
   @override
   void dispose() {
-    _title.dispose();
-    _description.dispose();
-    _category.dispose();
+    _caption.dispose();
+    _area.dispose();
+    _photoUrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    if (_title.text.trim().isEmpty ||
-        _description.text.trim().isEmpty ||
-        _category.text.trim().isEmpty ||
-        !_consent) {
+    if (_caption.text.trim().isEmpty || _photoUrl.text.trim().isEmpty) {
       setState(
         () => _error = _text(
           context,
-          'Complete all required fields and provide consent.',
-          'ሁሉንም አስፈላጊ መስኮች ይሙሉ እና ፈቃድ ይስጡ።',
+          'Add a caption and public photo URL to continue.',
+          'ለመቀጠል መግለጫ እና ይፋዊ የፎቶ አድራሻ ያስገቡ።',
         ),
       );
       return;
@@ -759,11 +873,9 @@ class _WorkPostDialogState extends State<_WorkPostDialog> {
     });
     try {
       final response = await ServiceBookApi.createWorkPost(
-        title: _title.text,
-        description: _description.text,
-        category: _category.text,
-        meetingMode: _meetingMode,
-        consentToShare: _consent,
+        caption: _caption.text,
+        area: _area.text,
+        photoUrl: _photoUrl.text,
       );
       if (!mounted) return;
       if (response['success'] == false) {
@@ -776,7 +888,7 @@ class _WorkPostDialogState extends State<_WorkPostDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _text(context, 'Work request posted.', 'የስራ ጥያቄ ተለጥፏል።'),
+            _text(context, 'Work sample shared.', 'የስራ ናሙና ተጋርቷል።'),
           ),
         ),
       );
@@ -789,56 +901,16 @@ class _WorkPostDialogState extends State<_WorkPostDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(_text(context, 'New work request', 'አዲስ የስራ ጥያቄ')),
+    title: Text(_text(context, 'Share a work sample', 'የስራ ናሙና አጋራ')),
     content: SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _field(_title, _text(context, 'Title', 'ርዕስ')),
+          _field(_caption, _text(context, 'Caption', 'መግለጫ')),
           const SizedBox(height: 10),
-          _field(_category, _text(context, 'Category', 'ምድብ')),
+          _field(_area, _text(context, 'Area (optional)', 'አካባቢ (አማራጭ)')),
           const SizedBox(height: 10),
-          _field(
-            _description,
-            _text(context, 'Describe the work', 'ስራውን ይግለጹ'),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            initialValue: _meetingMode,
-            decoration: InputDecoration(
-              labelText: _text(context, 'Meeting mode', 'የስብሰባ አይነት'),
-            ),
-            items: [
-              DropdownMenuItem(
-                value: 'in_person',
-                child: Text(_text(context, 'In person', 'ፊት ለፊት')),
-              ),
-              DropdownMenuItem(
-                value: 'remote',
-                child: Text(_text(context, 'Remote', 'በርቀት')),
-              ),
-              DropdownMenuItem(
-                value: 'either',
-                child: Text(_text(context, 'Either', 'ሁለቱም')),
-              ),
-            ],
-            onChanged: (value) =>
-                setState(() => _meetingMode = value ?? 'either'),
-          ),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _consent,
-            onChanged: (value) => setState(() => _consent = value ?? false),
-            title: Text(
-              _text(
-                context,
-                'I consent to sharing this request with service providers.',
-                'ይህን ጥያቄ ለአገልግሎት ሰጪዎች ማጋራትን እፈቅዳለሁ።',
-              ),
-            ),
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
+          _field(_photoUrl, _text(context, 'Public photo URL', 'ይፋዊ የፎቶ አድራሻ')),
           if (_error != null)
             Text(
               _error!,
@@ -971,13 +1043,13 @@ class _BookingsPageState extends State<BookingsPage> {
                             TextButton(
                               onPressed: booking.id.isEmpty
                                   ? null
-                                  : () => _setStatus(booking, 'confirmed'),
+                                  : () => _setStatus(booking, 'CONFIRMED'),
                               child: Text(_text(context, 'Confirm', 'አረጋግጥ')),
                             ),
                             TextButton(
                               onPressed: booking.id.isEmpty
                                   ? null
-                                  : () => _setStatus(booking, 'cancelled'),
+                                  : () => _setStatus(booking, 'DECLINED'),
                               child: Text(_text(context, 'Decline', 'አትቀበል')),
                             ),
                           ],

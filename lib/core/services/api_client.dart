@@ -18,6 +18,8 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  static final ValueNotifier<bool> demoMode = ValueNotifier(false);
+
   static Future<Map<String, String>> _getHeaders({
     bool includeAuth = true,
   }) async {
@@ -285,6 +287,7 @@ class ApiClient {
 
   static Map<String, dynamic> _handleResponse(http.Response response) {
     AppLogger.d('Response status: ${response.statusCode}');
+    demoMode.value = response.headers['x-sbms-data-source'] == 'demo';
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 

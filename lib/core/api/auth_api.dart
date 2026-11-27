@@ -32,6 +32,18 @@ class AccountException implements Exception {
 }
 
 class AuthApi {
+  static Future<Map<String, dynamic>> getDemoAccounts() async {
+    final response = await ApiClient.get(
+      '/auth/demo-users',
+      requiresAuth: false,
+    );
+    final value = response['data'];
+    if (value is Map) {
+      return value.map((key, item) => MapEntry(key.toString(), item));
+    }
+    throw ApiException('The demo account response was not in the expected format.');
+  }
+
   // Validate Ethiopian phone number format
   static String? validatePhoneNumber(String phone) {
     // Remove spaces and special characters

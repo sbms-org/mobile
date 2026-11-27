@@ -52,15 +52,22 @@ class ServiceBookApi {
     required String providerId,
     required String serviceId,
     required DateTime scheduledAt,
+    required int durationMinutes,
     required String meetingMode,
-    String? notes,
+    required double latitude,
+    required double longitude,
   }) {
     return ApiClient.post('/bookings', {
       'providerId': providerId,
       'serviceId': serviceId,
-      'scheduledAt': scheduledAt.toUtc().toIso8601String(),
-      'meetingMode': meetingMode,
-      if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      'startsAt': scheduledAt.toUtc().toIso8601String(),
+      'endsAt': scheduledAt
+          .add(Duration(minutes: durationMinutes))
+          .toUtc()
+          .toIso8601String(),
+      'mode': meetingMode,
+      'latitude': latitude,
+      'longitude': longitude,
     });
   }
 
@@ -70,30 +77,27 @@ class ServiceBookApi {
   ) {
     return ApiClient.patch(
       '/bookings/${Uri.encodeComponent(bookingId)}/status',
-      {'status': status},
+      {'status': status.toUpperCase()},
     );
   }
 
   static Future<Map<String, dynamic>> createWorkPost({
-    required String title,
-    required String description,
-    required String category,
-    required String meetingMode,
-    required bool consentToShare,
-    double? latitude,
-    double? longitude,
+    required String caption,
+    String? area,
+    required String photoUrl,
   }) {
-    if (!consentToShare) {
-      throw ApiException('Consent is required before sharing a work post.');
+    final uri = Uri.tryParse(photoUrl);
+    if (uri == null ||
+        !uri.hasScheme ||
+        !const {'http', 'https'}.contains(uri.scheme.toLowerCase())) {
+      throw ApiException('Enter a valid public photo URL before posting.');
     }
     return ApiClient.post('/work-posts', {
-      'title': title.trim(),
-      'description': description.trim(),
-      'category': category.trim(),
-      'meetingMode': meetingMode,
-      'consentToShare': true,
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
+      'caption': caption.trim(),
+      if (area != null && area.trim().isNotEmpty) 'area': area.trim(),
+      'media': [
+        {'type': 'photo', 'url': uri.toString()},
+      ],
     });
   }
 
@@ -103,7 +107,12 @@ class ServiceBookApi {
     String? bookingId,
   }) {
     return ApiClient.post('/issues', {
-      'category': category,
+      'type': switch (category.toLowerCase()) {
+        'safety' => 'SAFETY',
+        'conduct' => 'USER',
+        _ => 'PLATFORM',
+      },
+      'subject': category,
       'description': description.trim(),
       if (bookingId != null && bookingId.isNotEmpty) 'bookingId': bookingId,
     });

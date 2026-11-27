@@ -7,6 +7,8 @@ class ServiceProvider {
     this.description,
     this.location,
     this.rating,
+    this.latitude,
+    this.longitude,
     this.services = const [],
     this.availability,
     this.meetingModes = const [],
@@ -19,6 +21,8 @@ class ServiceProvider {
   final String? description;
   final String? location;
   final double? rating;
+  final double? latitude;
+  final double? longitude;
   final List<Map<String, dynamic>> services;
   final dynamic availability;
   final List<String> meetingModes;
@@ -29,6 +33,7 @@ class ServiceProvider {
       id: _string(json['id'] ?? json['providerId'] ?? json['provider_id']),
       name: _string(
         json['name'] ??
+            json['displayName'] ??
             json['fullName'] ??
             json['full_name'] ??
             json['businessName'] ??
@@ -42,6 +47,8 @@ class ServiceProvider {
         json['location'] ?? json['address'] ?? json['city'],
       ),
       rating: _double(json['rating'] ?? json['averageRating']),
+      latitude: _double(json['latitude']),
+      longitude: _double(json['longitude']),
       services: serviceList is List
           ? serviceList.whereType<Map>().map(_toStringMap).toList()
           : const [],
@@ -77,10 +84,15 @@ class ServiceWorkPost {
   factory ServiceWorkPost.fromJson(Map<String, dynamic> json) =>
       ServiceWorkPost(
         id: _string(json['id']),
-        title: _string(json['title'], fallback: 'Service request'),
-        description: _string(json['description'] ?? json['details']),
+        title: _string(
+          json['title'] ?? json['caption'],
+          fallback: 'ServiceBook work',
+        ),
+        description: _string(
+          json['description'] ?? json['details'] ?? json['caption'],
+        ),
         category: _nullableString(json['category']),
-        location: _nullableString(json['location'] ?? json['city']),
+        location: _nullableString(json['location'] ?? json['area'] ?? json['city']),
         meetingMode: _nullableString(
           json['meetingMode'] ?? json['meeting_mode'],
         ),
@@ -115,7 +127,7 @@ class ServiceBooking {
     final service = json['service'];
     return ServiceBooking(
       id: _string(json['id'] ?? json['bookingId'] ?? json['booking_id']),
-      status: _string(json['status'], fallback: 'pending'),
+      status: _string(json['status'], fallback: 'REQUESTED'),
       providerName: _nullableString(
         json['providerName'] ??
             (provider is Map
@@ -132,9 +144,12 @@ class ServiceBooking {
             json['service_name'],
       ),
       scheduledAt: DateTime.tryParse(
-        (json['scheduledAt'] ?? json['scheduled_at'] ?? '').toString(),
+        (json['startsAt'] ?? json['scheduledAt'] ?? json['scheduled_at'] ?? '')
+            .toString(),
       ),
-      meetingMode: _nullableString(json['meetingMode'] ?? json['meeting_mode']),
+      meetingMode: _nullableString(
+        json['mode'] ?? json['meetingMode'] ?? json['meeting_mode'],
+      ),
     );
   }
 }
