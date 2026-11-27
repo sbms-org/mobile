@@ -1,0 +1,68 @@
+name: Android APKs by architecture
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-architectures-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: armeabi-v7a
+            target: android-arm
+            artifact: sbms-android-armeabi-v7a
+            apk: app-armeabi-v7a-release.apk
+          - name: arm64-v8a
+            target: android-arm64
+            artifact: sbms-android-arm64-v8a
+            apk: app-arm64-v8a-release.apk
+          - name: x86_64
+            target: android-x64
+            artifact: sbms-android-x86_64
+            apk: app-x86_64-release.apk
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.35.6
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build architecture-specific APK
+        run: >-
+          flutter build apk --release --split-per-abi
+          --target-platform ${{ matrix.target }}
+
+      - name: Upload CI-signed APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-${{ github.sha }}
+          path: build/app/outputs/flutter-apk/${{ matrix.apk }}
+          if-no-files-found: error
+          retention-days: 14
