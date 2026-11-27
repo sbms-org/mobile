@@ -9,6 +9,7 @@ class ServiceProvider {
     this.rating,
     this.latitude,
     this.longitude,
+    this.verificationStatus,
     this.services = const [],
     this.availability,
     this.meetingModes = const [],
@@ -23,6 +24,7 @@ class ServiceProvider {
   final double? rating;
   final double? latitude;
   final double? longitude;
+  final String? verificationStatus;
   final List<Map<String, dynamic>> services;
   final dynamic availability;
   final List<String> meetingModes;
@@ -49,6 +51,7 @@ class ServiceProvider {
       rating: _double(json['rating'] ?? json['averageRating']),
       latitude: _double(json['latitude']),
       longitude: _double(json['longitude']),
+      verificationStatus: _nullableString(json['verificationStatus']),
       services: serviceList is List
           ? serviceList.whereType<Map>().map(_toStringMap).toList()
           : const [],

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/enums/user_role.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/services/api_client.dart';
-import '../../../core/services/secure_storage_service.dart';
 import '../data/servicebook_api.dart';
 import '../domain/models/servicebook_models.dart';
 
@@ -948,17 +947,20 @@ class BookingsPage extends StatefulWidget {
 
 class _BookingsPageState extends State<BookingsPage> {
   late Future<List<ServiceBooking>> _bookings;
+  late Future<List<Map<String, dynamic>>> _consentRequests;
   String? _actionError;
 
   @override
   void initState() {
     super.initState();
     _bookings = ServiceBookApi.bookings();
+    _consentRequests = ServiceBookApi.consentRequests();
   }
 
   void _reload() => setState(() {
     _actionError = null;
     _bookings = ServiceBookApi.bookings();
+    _consentRequests = ServiceBookApi.consentRequests();
   });
 
   Future<void> _setStatus(ServiceBooking booking, String status) async {
@@ -972,6 +974,21 @@ class _BookingsPageState extends State<BookingsPage> {
         throw Exception(response['message'] ?? 'Booking status update failed');
       }
       _reload();
+    } catch (error) {
+      if (mounted) setState(() => _actionError = error.toString());
+    }
+  }
+
+  Future<void> _respondToConsent(
+    Map<String, dynamic> post,
+    bool allowed,
+  ) async {
+    try {
+      await ServiceBookApi.respondToConsent(
+        (post['id'] ?? '').toString(),
+        allowed: allowed,
+      );
+      if (mounted) _reload();
     } catch (error) {
       if (mounted) setState(() => _actionError = error.toString());
     }
@@ -998,6 +1015,84 @@ class _BookingsPageState extends State<BookingsPage> {
           children: [
             if (_actionError != null)
               _ErrorState(message: _actionError!, onRetry: _reload),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _consentRequests,
+              builder: (context, consentSnapshot) {
+                if (consentSnapshot.hasError) {
+                  return _ErrorState(
+                    message: consentSnapshot.error.toString(),
+                    onRetry: _reload,
+                  );
+                }
+                final requests = consentSnapshot.data ?? const [];
+                if (requests.isEmpty) return const SizedBox.shrink();
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _text(context, 'Work-post consent', 'የስራ ማስታወቂያ ፈቃድ'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    for (final post in requests)
+                      Card(
+                        color: const Color(0xFFFFFAF0),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                (post['providerName'] ?? 'Service provider')
+                                    .toString(),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                (post['caption'] ??
+                                        'A completed service is proposed as a verified work post.')
+                                    .toString(),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _text(
+                                  context,
+                                  'Allowing publishes this work to the public feed after moderation.',
+                                  'ፈቃድ ከሰጡ በኋላ ይህ ስራ ከግምገማ በኋላ በይፋዊ ማስታወቂያ ላይ ይታተማል።',
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              Wrap(
+                                spacing: 8,
+                                children: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        _respondToConsent(post, false),
+                                    child: Text(
+                                      _text(context, 'Decline', 'እምቢ በል'),
+                                    ),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        _respondToConsent(post, true),
+                                    child: Text(
+                                      _text(
+                                        context,
+                                        'Allow sharing',
+                                        'ማጋራትን ፍቀድ',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
             if (bookings.isEmpty)
               _EmptyState(
                 message: _text(context, 'No bookings yet.', 'ገና ቦታ አልተያዘም።'),
@@ -1073,28 +1168,78 @@ class MyServicesPage extends StatefulWidget {
 }
 
 class _MyServicesPageState extends State<MyServicesPage> {
-  late Future<Map<String, dynamic>?> _identity;
-  Future<ServiceProvider>? _provider;
+  final _category = TextEditingController();
+  final _latitude = TextEditingController();
+  final _longitude = TextEditingController();
+  Future<ServiceProvider?>? _provider;
+  bool _creatingProfile = false;
+  String? _profileError;
 
   @override
   void initState() {
     super.initState();
-    _identity = SecureStorageService.getUserData();
     _loadProvider();
   }
 
   void _loadProvider() {
-    _provider = _identity.then((user) {
-      final id = user?['provider_id'] ?? user?['providerId'] ?? user?['id'];
-      if (id == null || id.toString().isEmpty) {
-        throw StateError('Your account does not include a provider ID.');
-      }
-      return ServiceBookApi.provider(id.toString());
-    });
+    _provider = ServiceBookApi.myProvider();
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder<ServiceProvider>(
+  void dispose() {
+    _category.dispose();
+    _latitude.dispose();
+    _longitude.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createProfile() async {
+    final latitude = double.tryParse(_latitude.text.trim());
+    final longitude = double.tryParse(_longitude.text.trim());
+    if (_category.text.trim().isEmpty ||
+        latitude == null ||
+        longitude == null ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
+      setState(() {
+        _profileError = _text(
+          context,
+          'Enter a service category and valid coordinates.',
+          'የአገልግሎት ምድብ እና ትክክለኛ መጋጠሚያ ያስገቡ።',
+        );
+      });
+      return;
+    }
+    setState(() {
+      _creatingProfile = true;
+      _profileError = null;
+    });
+    try {
+      await ServiceBookApi.createProviderProfile(
+        category: _category.text,
+        latitude: latitude,
+        longitude: longitude,
+      );
+      if (mounted) setState(_loadProvider);
+    } catch (error) {
+      if (mounted) setState(() => _profileError = error.toString());
+    } finally {
+      if (mounted) setState(() => _creatingProfile = false);
+    }
+  }
+
+  Future<void> _showCreateService(ServiceProvider provider) async {
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (_) => _CreateServiceDialog(provider: provider),
+    );
+    if (created == true && mounted) setState(_loadProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<ServiceProvider?>(
     future: _provider,
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1106,15 +1251,105 @@ class _MyServicesPageState extends State<MyServicesPage> {
           onRetry: () => setState(_loadProvider),
         );
       }
-      final provider = snapshot.data!;
+      final provider = snapshot.data;
+      if (provider == null) {
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text(
+              _text(
+                context,
+                'Set up your provider profile',
+                'የአገልግሎት ሰጪ መገለጫዎን ያዘጋጁ',
+              ),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _text(
+                context,
+                'Your profile is reviewed before it appears in nearby search.',
+                'መገለጫዎ በአቅራቢያ ፍለጋ ከመታየቱ በፊት ይገመገማል።',
+              ),
+            ),
+            const SizedBox(height: 16),
+            _field(
+              _category,
+              _text(context, 'Service category', 'የአገልግሎት ምድብ'),
+            ),
+            const SizedBox(height: 10),
+            _field(
+              _latitude,
+              _text(context, 'Latitude', 'ኬክሮስ'),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _field(
+              _longitude,
+              _text(context, 'Longitude', 'ኬንትሮስ'),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
+            if (_profileError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _profileError!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _creatingProfile ? null : _createProfile,
+              child: Text(
+                _creatingProfile
+                    ? _text(context, 'Submitting…', 'በመላክ ላይ…')
+                    : _text(context, 'Submit for verification', 'ለማረጋገጫ ላክ'),
+              ),
+            ),
+          ],
+        );
+      }
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(provider.name, style: Theme.of(context).textTheme.headlineSmall),
+          if (provider.verificationStatus != null &&
+              provider.verificationStatus != 'VERIFIED') ...[
+            const SizedBox(height: 8),
+            Text(
+              provider.verificationStatus == 'PENDING'
+                  ? _text(
+                      context,
+                      'Profile verification is pending.',
+                      'የመገለጫ ማረጋገጫ በመጠባበቅ ላይ ነው።',
+                    )
+                  : _text(
+                      context,
+                      'Profile verification was not approved.',
+                      'የመገለጫ ማረጋገጫ አልጸደቀም።',
+                    ),
+            ),
+          ],
           const SizedBox(height: 8),
-          Text(
-            _text(context, 'Services', 'አገልግሎቶች'),
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _text(context, 'Services', 'አገልግሎቶች'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              FilledButton.tonalIcon(
+                onPressed: provider.meetingModes.isEmpty
+                    ? null
+                    : () => _showCreateService(provider),
+                icon: const Icon(Icons.add),
+                label: Text(_text(context, 'Add service', 'አገልግሎት ጨምር')),
+              ),
+            ],
           ),
           if (provider.services.isEmpty)
             _EmptyState(
@@ -1132,7 +1367,9 @@ class _MyServicesPageState extends State<MyServicesPage> {
                   (service['name'] ?? service['title'] ?? 'Service').toString(),
                 ),
                 subtitle: Text((service['description'] ?? '').toString()),
-                trailing: Text((service['price'] ?? '').toString()),
+                trailing: Text(
+                  'ETB ${((service['priceMinor'] as num?) ?? 0) ~/ 100}',
+                ),
               ),
             ),
           const SizedBox(height: 16),
@@ -1158,16 +1395,152 @@ class _MyServicesPageState extends State<MyServicesPage> {
             Text(provider.meetingModes.join(', ')),
           ],
           const SizedBox(height: 16),
-          Text(
-            _text(
-              context,
-              'Service and availability editing is not enabled in the mobile API contract yet.',
-              'የአገልግሎት እና ተገኝነት ማስተካከያ በሞባይል API ውል ገና አልተካተተም።',
-            ),
-          ),
         ],
       );
     },
+  );
+}
+
+class _CreateServiceDialog extends StatefulWidget {
+  const _CreateServiceDialog({required this.provider});
+  final ServiceProvider provider;
+
+  @override
+  State<_CreateServiceDialog> createState() => _CreateServiceDialogState();
+}
+
+class _CreateServiceDialogState extends State<_CreateServiceDialog> {
+  final _title = TextEditingController();
+  final _category = TextEditingController();
+  final _description = TextEditingController();
+  final _price = TextEditingController();
+  final _duration = TextEditingController(text: '60');
+  late List<String> _modes;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _category.text = widget.provider.category ?? '';
+    _modes = List.of(widget.provider.meetingModes);
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _category.dispose();
+    _description.dispose();
+    _price.dispose();
+    _duration.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final price = double.tryParse(_price.text.trim());
+    final duration = int.tryParse(_duration.text.trim());
+    if (_title.text.trim().isEmpty ||
+        _category.text.trim().isEmpty ||
+        price == null ||
+        price < 0 ||
+        duration == null ||
+        duration < 1 ||
+        _modes.isEmpty) {
+      setState(
+        () => _error = _text(
+          context,
+          'Enter a title, category, valid price and duration, and at least one meeting mode.',
+          'ርዕስ፣ ምድብ፣ ትክክለኛ ዋጋ እና ቆይታ፣ እንዲሁም ቢያንስ አንድ የመገናኛ አይነት ያስገቡ።',
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ServiceBookApi.createService(
+        title: _title.text,
+        category: _category.text,
+        description: _description.text,
+        priceMinor: (price * 100).round(),
+        durationMinutes: duration,
+        meetingModes: _modes,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(_text(context, 'Add a service', 'አገልግሎት ጨምር')),
+    content: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _field(_title, _text(context, 'Service title', 'የአገልግሎት ርዕስ')),
+          const SizedBox(height: 8),
+          _field(_category, _text(context, 'Category', 'ምድብ')),
+          const SizedBox(height: 8),
+          _field(
+            _description,
+            _text(context, 'Description', 'መግለጫ'),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 8),
+          _field(
+            _price,
+            _text(context, 'Price (ETB)', 'ዋጋ (ብር)'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          const SizedBox(height: 8),
+          _field(
+            _duration,
+            _text(context, 'Duration (minutes)', 'ቆይታ (ደቂቃ)'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 8),
+          for (final mode in widget.provider.meetingModes)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _modes.contains(mode),
+              onChanged: (enabled) => setState(() {
+                if (enabled == true) {
+                  _modes.add(mode);
+                } else {
+                  _modes.remove(mode);
+                }
+              }),
+              title: Text(mode.replaceAll('_', ' ')),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          if (_error != null)
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: _saving ? null : () => Navigator.pop(context, false),
+        child: Text(_text(context, 'Cancel', 'ሰርዝ')),
+      ),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: Text(
+          _saving
+              ? _text(context, 'Saving…', 'በማስቀመጥ ላይ…')
+              : _text(context, 'Save service', 'አገልግሎቱን አስቀምጥ'),
+        ),
+      ),
+    ],
   );
 }
 

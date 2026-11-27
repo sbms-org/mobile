@@ -38,9 +38,72 @@ class ServiceBookApi {
     );
   }
 
+  static Future<ServiceProvider?> myProvider() async {
+    final response = await ApiClient.get('/providers/me');
+    final data = response['data'];
+    if (data == null) return null;
+    if (data is! Map) {
+      throw ApiException(
+        'The provider profile response was not in the expected format.',
+      );
+    }
+    return ServiceProvider.fromJson(
+      data.map((key, value) => MapEntry(key.toString(), value)),
+    );
+  }
+
+  static Future<Map<String, dynamic>> createProviderProfile({
+    required String category,
+    required double latitude,
+    required double longitude,
+  }) {
+    return ApiClient.post('/providers', {
+      'category': category.trim(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'serviceRadiusKm': 25,
+      'travelBufferMinutes': 30,
+      'meetingModes': ['provider_comes', 'client_goes', 'third_location'],
+    });
+  }
+
+  static Future<Map<String, dynamic>> createService({
+    required String title,
+    required String category,
+    required String description,
+    required int priceMinor,
+    required int durationMinutes,
+    required List<String> meetingModes,
+  }) {
+    return ApiClient.post('/providers/me/services', {
+      'title': title.trim(),
+      'category': category.trim(),
+      'description': description.trim(),
+      'priceMinor': priceMinor,
+      'durationMinutes': durationMinutes,
+      'meetingModes': meetingModes,
+    });
+  }
+
   static Future<List<ServiceWorkPost>> workFeed() async {
     final response = await ApiClient.get('/work-posts/feed');
     return _list(response, 'work posts').map(ServiceWorkPost.fromJson).toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> consentRequests() async {
+    final response = await ApiClient.get('/work-posts/consent-requests');
+    return _list(response, 'consent requests');
+  }
+
+  static Future<Map<String, dynamic>> respondToConsent(
+    String postId, {
+    required bool allowed,
+    List<String> limitations = const [],
+  }) {
+    return ApiClient.post(
+      '/work-posts/${Uri.encodeComponent(postId)}/consent',
+      {'allowed': allowed, 'limitations': limitations},
+    );
   }
 
   static Future<List<ServiceBooking>> bookings() async {
