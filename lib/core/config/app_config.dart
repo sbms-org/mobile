@@ -8,4 +8,9 @@ class AppConfig {
   static const bool isProduction = bool.fromEnvironment('dart.vm.product');
   static const int requestTimeout = 30;
   static const int maxFileSize = 10 * 1024 * 1024; // 10MB
+
+  static const bool enableTestTools = bool.fromEnvironment(
+    'SBMS_TEST_MODE',
+    defaultValue: false,
+  );
 }

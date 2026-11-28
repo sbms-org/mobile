@@ -8,6 +8,11 @@ import '../../../../shared/widgets/curved_header.dart';
 import '../../../../core/constants/app_colors.dart';
 import 'otp_page.dart';
 import '../../../../shared/widgets/app_toast.dart';
+import '../../../../core/config/app_config.dart';
+import '../../../../core/enums/user_role.dart';
+import '../../../../core/providers/user_provider.dart';
+import '../../../../core/services/sbms_dump_service.dart';
+import '../../../servicebook/presentation/servicebook_home_page.dart';
 
 class PhoneNumberPage extends ConsumerStatefulWidget {
   const PhoneNumberPage({super.key});
@@ -20,6 +25,7 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
   final _phoneController = TextEditingController();
   List<Map<String, dynamic>> _demoAccounts = [];
   String? _demoAccountsError;
+  bool _testLoginInProgress = false;
 
   @override
   void initState() {
@@ -28,6 +34,7 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
   }
 
   Future<void> _loadDemoAccounts() async {
+    if (!AppConfig.enableTestTools) return;
     try {
       final response = await AuthApi.getDemoAccounts();
       final accounts = response['users'];
@@ -41,9 +48,14 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
               }).toList()
             : [];
       });
-    } catch (error) {
-      if (mounted) {
-        setState(() => _demoAccountsError = error.toString());
+    } catch (_) {
+      if (AppConfig.enableTestTools && mounted) {
+        try {
+          final accounts = await SbmsDumpService.users();
+          setState(() => _demoAccounts = accounts);
+        } catch (error) {
+          setState(() => _demoAccountsError = error.toString());
+        }
       }
     }
   }
@@ -115,6 +127,44 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
     }
   }
 
+  Future<void> skipLoginForTesting() async {
+    final account = _demoAccounts.cast<Map<String, dynamic>?>().firstWhere(
+      (item) => item?['role'] == 'client',
+      orElse: () => _demoAccounts.isEmpty ? null : _demoAccounts.first,
+    );
+    final mobile = account?['mobile']?.toString();
+    if (mobile == null || mobile.isEmpty) {
+      AppToast.error(context, 'No demo account is available for testing.');
+      return;
+    }
+
+    final role = UserRole.fromApiValue(account?['role']?.toString());
+    if (role == null) {
+      AppToast.error(context, 'The demo account has an unsupported role.');
+      return;
+    }
+
+    setState(() => _testLoginInProgress = true);
+    try {
+      final response = await AuthApi.verifyOtp(mobile, '123456');
+      if (!mounted) return;
+      if (!response.success) {
+        AppToast.error(context, response.message);
+        return;
+      }
+
+      ref.read(userRoleProvider.notifier).setRole(role);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => ServiceBookHomePage(role: role)),
+        (_) => false,
+      );
+    } catch (error) {
+      if (mounted) AppToast.error(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _testLoginInProgress = false);
+    }
+  }
+
   void _showAboutDialog() {
     final l10n = L10n.of(context);
     AppDialogs.showContent(
@@ -176,7 +226,8 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                     l10n.enterPhoneNumber,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  if (_demoAccounts.isNotEmpty || _demoAccountsError != null) ...[
+                  if (_demoAccounts.isNotEmpty ||
+                      _demoAccountsError != null) ...[
                     const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
@@ -208,19 +259,24 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                               spacing: 6,
                               runSpacing: 4,
                               children: _demoAccounts.map((account) {
-                                final name = account['fullname']?.toString() ??
+                                final name =
+                                    account['fullname']?.toString() ??
                                     'ServiceBook user';
-                                final role = account['role']
-                                        ?.toString()
-                                        .replaceAll('_', ' ') ??
+                                final role =
+                                    account['role']?.toString().replaceAll(
+                                      '_',
+                                      ' ',
+                                    ) ??
                                     '';
                                 final mobile =
                                     account['mobile']?.toString() ?? '';
                                 return ActionChip(
                                   label: Text('$name · $role'),
                                   onPressed: () {
-                                    _phoneController.text = mobile
-                                        .replaceFirst('+251', '');
+                                    _phoneController.text = mobile.replaceFirst(
+                                      '+251',
+                                      '',
+                                    );
                                   },
                                 );
                               }).toList(),
@@ -228,7 +284,8 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                           ],
                           if (_demoAccountsError != null)
                             Text(
-                              Localizations.localeOf(context).languageCode == 'am'
+                              Localizations.localeOf(context).languageCode ==
+                                      'am'
                                   ? 'የሙከራ መለያዎችን ማግኘት አልተቻለም። ${_demoAccountsError!}'
                                   : 'Demo accounts could not be loaded: ${_demoAccountsError!}',
                               style: TextStyle(
@@ -336,6 +393,31 @@ class _PhoneNumberPageState extends ConsumerState<PhoneNumberPage> {
                   ),
 
                   const SizedBox(height: 16),
+
+                  if (AppConfig.enableTestTools) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: _testLoginInProgress
+                            ? null
+                            : skipLoginForTesting,
+                        icon: const Icon(Icons.skip_next_outlined),
+                        label: Text(
+                          _testLoginInProgress
+                              ? (Localizations.localeOf(context).languageCode ==
+                                        'am'
+                                    ? 'በመግባት ላይ…'
+                                    : 'Signing in…')
+                              : (Localizations.localeOf(context).languageCode ==
+                                        'am'
+                                    ? 'ለሙከራ ዝለል'
+                                    : 'Skip login for testing'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   Center(
                     child: Text(
