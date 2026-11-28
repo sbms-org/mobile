@@ -9,8 +9,9 @@ class AppConfig {
   static const int requestTimeout = 30;
   static const int maxFileSize = 10 * 1024 * 1024; // 10MB
 
+  // Temporary development setting. Disable with --dart-define=SBMS_TEST_MODE=false before release.
   static const bool enableTestTools = bool.fromEnvironment(
     'SBMS_TEST_MODE',
-    defaultValue: false,
+    defaultValue: true,
   );
 }
